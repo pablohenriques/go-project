@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	routes "github.com/pablohenriques/go-project/controller"
 	handler "github.com/pablohenriques/go-project/handler"
-	routes "github.com/pablohenriques/go-project/router"
 )
 
 func main() {

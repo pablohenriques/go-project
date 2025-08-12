@@ -1,19 +1,16 @@
 package clients
 
 import (
-	"errors"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/gofiber/fiber/v2"
+	config "github.com/pablohenriques/go-project/config"
 	"github.com/pablohenriques/go-project/dto"
 	"github.com/sony/gobreaker"
-)
-
-var (
-	client *resty.Client
-	cb     *gobreaker.CircuitBreaker
 )
 
 func GetExternalTasks(c *fiber.Ctx) error {
@@ -42,57 +39,56 @@ func GetExternalTasks(c *fiber.Ctx) error {
 	return c.JSON(todoDTO)
 }
 
-func CircuitBreakerHandler() {
-	var settings gobreaker.Settings
-	settings.Name = "HTTP-GET-Httpbin"
-	settings.MaxRequests = 1
-	settings.Interval = 0
-	settings.Timeout = 5 * time.Second
+func GetHttpBin() {
+	cb := gobreaker.NewCircuitBreaker(config.GetSetting())
+	client := resty.New()
 
-	settings.ReadyToTrip = func(counts gobreaker.Counts) bool {
-		return counts.ConsecutiveFailures > 3
-	}
+	urlSuccess := fmt.Sprintf("https://httpbin.org/status%d", http.StatusOK)
+	urlFailure := fmt.Sprintf("https://httpbin.org/status%d", http.StatusServiceUnavailable)
 
-	settings.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
-		log.Printf("CircuitBreaker '%s' mudou de estado: %s -> %s\n", name, from, to)
-	}
+	for index := 0; index < 6; index++ {
+		log.Printf("--- Tentativa %d ---", index+1)
 
-	cb = gobreaker.NewCircuitBreaker(settings)
-}
-
-func GetCallExternalAPICircuit(c *fiber.Ctx) error {
-	var todoDTO dto.TodoDTO
-	var errorDTO map[string]interface{}
-
-	client := resty.New().SetBaseURL("https://httpbin.org/status").SetTimeout(10 * time.Second)
-
-	resp, err := client.R().SetResult(&todoDTO).SetError(&errorDTO).Get("/200")
-
-	if err != nil {
-		log.Printf("Erro ao chamar API externa: %v", err)
-
-		if errors.Is(err, gobreaker.ErrOpenState) {
-			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
-				"error":  "Circuit Breaker Aberto",
-				"messge": "Serviço fora do ar",
-			})
+		url := urlSuccess
+		if index > 0 {
+			url = urlFailure
 		}
 
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "A operação falhou.",
-			"details": err.Error(),
+		resultado, err := cb.Execute(func() (interface{}, error) {
+			return fazerRequisicao(client, url)
 		})
+
+		if err != nil {
+			log.Printf("Resultado: Erro! -> %v\n", err)
+		} else {
+			log.Printf("Resultado: Sucesso! -> %v\n", resultado)
+		}
+		time.Sleep(time.Second) // Pausa entre as tentativas
 	}
 
+	log.Printf("\n--- Aguardando timeout Circuit Breaker (4 segundos) ---\n")
+	time.Sleep(5 * time.Second)
+
+	log.Println("--- Tentativa de recuperação (estado Meio-Aberto) ---")
+	resultado, err := cb.Execute(func() (interface{}, error) {
+		return fazerRequisicao(client, urlSuccess)
+	})
+	if err != nil {
+		log.Printf("Resultado: Erro! -> %v\n", err)
+	} else {
+		log.Printf("Resultado: Sucesso! -> %v\n", resultado)
+	}
+
+}
+
+func fazerRequisicao(client *resty.Client, url string) (string, error) {
+	log.Printf(" -> Fazendo requisição para: %s", url)
+	resp, err := client.R().Get(url)
+	if err != nil {
+		return "", err
+	}
 	if resp.IsError() {
-		log.Printf("API retornou erro. Status=%s, Corpo=%v", resp.Status(), errorDTO)
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error":   "Erro comunicação API Externa",
-			"details": errorDTO,
-		})
+		return "", fmt.Errorf("API retornou status de erro: %s", resp.Status())
 	}
-
-	log.Printf("Dados convertidos com sucesso: %+v", todoDTO)
-	return c.JSON(todoDTO)
-
+	return fmt.Sprintf("Sucesso com status: %s", resp.Status()), nil
 }
