@@ -9,15 +9,15 @@ import (
 
 func SetupRoutes(app *fiber.App) {
 	app.Use(logger.New())
+	app.Get("/", services.Home)
+	app.Get("/erro", services.Erro500)
+	app.Get("/request-client", clients.GetExternalTasks)
+	app.Get("/request-circuit", services.CallCircuitBreaker)
+
 	v1 := app.Group("/v1")
 	v1.Post("/create-book", services.CreateBook)
 	v1.Get("/get-one-book", services.GetOneBook)
 	v1.Get("/get-all-book", services.GetAllBook)
 	v1.Put("/update-book/:id", services.UpdateBook)
 	v1.Delete("/delete-book", services.DeleteBook)
-
-	app.Get("/", services.Home)
-	app.Get("/erro", services.Erro500)
-	app.Get("/request-client", clients.GetExternalTasks)
-	app.Get("/request-circuit", services.CallCircuitBreaker)
 }
