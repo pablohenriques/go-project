@@ -114,7 +114,6 @@ func remove(s []entity.Book, i int) []entity.Book {
 }
 
 func Erro500(c *fiber.Ctx) error {
-
 	if time.Now().Unix()%2 == 0 {
 		return errors.New("não foi possível conectar")
 	}

@@ -15,7 +15,7 @@ func GetHttpBin() {
 	cb := gobreaker.NewCircuitBreaker(config.GetSetting())
 	client := resty.New()
 
-	urlSuccess := fmt.Sprintf("https://httpbin.org/status%d", http.StatusOK)
+	urlSuccess := fmt.Sprintf("https://httpbin.org/status/%d", http.StatusOK)
 	urlFailure := fmt.Sprintf("https://httpbin.org/status%d", http.StatusServiceUnavailable)
 
 	for index := 0; index < 6; index++ {
