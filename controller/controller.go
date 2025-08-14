@@ -19,5 +19,5 @@ func SetupRoutes(app *fiber.App) {
 	v1.Get("/get-one-book", services.GetOneBook)
 	v1.Get("/get-all-book", services.GetAllBook)
 	v1.Put("/update-book/:id", services.UpdateBook)
-	v1.Delete("/delete-book", services.DeleteBook)
+	v1.Delete("/delete-book/:id", services.DeleteBook)
 }

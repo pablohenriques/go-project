@@ -82,7 +82,7 @@ func UpdateBook(c *fiber.Ctx) error {
 			listBooks[index].Nome = updateBook.Nome
 			listBooks[index].Detalhes = updateBook.Detalhes
 			log.Print(listBooks[index])
-			return c.Status(fiber.StatusOK).JSON(book.ToResponseDTO())
+			return c.Status(fiber.StatusOK).JSON(book.ToResponseDTO()) // *pesquisa
 		}
 	}
 

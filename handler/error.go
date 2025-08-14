@@ -12,7 +12,7 @@ type ErrorResponse struct {
 }
 
 func CustomErrorHandler(c *fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError
+	code := fiber.StatusBadGateway
 	message := "Internal Server Error - Minha Mensagem Interna"
 
 	errorResponse := ErrorResponse{
